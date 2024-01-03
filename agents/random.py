@@ -26,7 +26,6 @@ class MrRandom:
     def clear_queue(self, outer_queue):
         self.move_queue = outer_queue
 
-
     def findBestMove(self, gs):
         """
         AI that plays a random Move out of the legal Moves
