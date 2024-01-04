@@ -1,16 +1,17 @@
+from queue import Queue
+import time
+import copy
+import random
 import sys
 sys.path.append(
     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
 
-import random
 from ChessEngine import GameState
-import copy
-import time
 
 
 class Agent:
     def __init__(self):
-        self.move_queue = None
+        self.move_queue = None #Queue() # wieder ändern zum starten
         self.nextMove = None
         self.counter = None
         self.currentDepth = None
@@ -104,10 +105,10 @@ class Agent:
                 self.color = 'Black'
 
         validMoves = gs.getValidMoves()
-        
+
         # copy of current board state
         current_board = copy.deepcopy(gs)
-        
+
         # theoretisch noch openings lernen mit try : opening, except: minmax
 
         bestMove = None
@@ -116,54 +117,66 @@ class Agent:
         beta = 100000
         # Choose calculation depth here
         depth = 2
-        
+
         start_time = time.time()
         time_limit = 2.8  # Zeitlimit in Sekunden
-        
+        bestMove = {
+            'best_move': None,
+            'best_value': bestValue
+        }
 
         while True:
             for move in validMoves:
                 gs.makeMove(move)
-                boardValue = -self.alphabeta(gs, -beta, -alpha, depth - 1, start_time, time_limit)
+                boardValue = - \
+                    self.alphabeta(gs, -beta, -alpha, depth -
+                                   1, start_time, time_limit)
                 if boardValue > bestValue:
                     bestValue = boardValue
-                    bestMove = move
+                    bestMoveForDepth = move
                 if boardValue > alpha:
                     alpha = boardValue
 
                 elapsed_time = time.time() - start_time
                 if elapsed_time >= time_limit:
                     break
-                
-                gs = current_board  # zurück zum aktuellen Zustand
+
+                gs.undoMove()  # zurück zum aktuellen Zustand
 
             depth += 1  # Erhöhe die Tiefe für den nächsten Iterationsschritt
 
             elapsed_time = time.time() - start_time
             if elapsed_time >= time_limit:
                 break
-        
-        gs.makeMove(bestMove)
-        new_position = gs
-        gs = current_board
-        
-        print("Der beste Move ist: ",bestMove)
-        
-        # choose best Move
-        self.update_move(bestMove, self.evaluatePosition(new_position), depth)
+            
+            # Debugging
+            print("Tiefe: ", depth-1, "   Move: ", bestMoveForDepth.pieceMoved, bestMoveForDepth.getChessNotation())
+            
+            # deepest move wird nur aktualisiert, falls die berechnung durchgelaufen ist
+            if bestValue > bestMove['best_value'] :
+                bestMove['best_move'] = bestMoveForDepth
+                bestMove['best_value'] = bestValue
 
+
+        print("Der beste Move ist: ", bestMove['best_move'], "   score: ", self.evaluatePosition(gs))
+
+        # choose best Move
+        self.update_move(
+            bestMove['best_move'], self.evaluatePosition(gs), depth)
 
     def alphabeta(self, board, alpha, beta, depthleft, start_time, time_limit):
         bestscore = -9999
-        elapsed_time = time.time() - start_time # consider time_limit
+        elapsed_time = time.time() - start_time  # consider time_limit
         if elapsed_time >= time_limit:
             return bestscore
-        
+
         if (depthleft == 0):
             return self.quiesce(board, alpha, beta, start_time, time_limit)
+            
         for move in board.getValidMoves():
             board.makeMove(move)
-            score = -self.alphabeta(board, -beta, -alpha, depthleft - 1, start_time, time_limit)
+            score = -self.alphabeta(board, -beta, -alpha,
+                                    depthleft - 1, start_time, time_limit)
             board.undoMove()
             if (score >= beta):
                 return score
@@ -178,16 +191,17 @@ class Agent:
         elapsed_time = time.time() - start_time
         if elapsed_time >= time_limit:
             return alpha
-        
+
         stand_pat = self.evaluatePosition(board)
         if (stand_pat >= beta):
             return beta
         if (alpha < stand_pat):
             alpha = stand_pat
         for move in board.getValidMoves():
-            if move.isCapture :
+            if move.isCapture:
                 board.makeMove(move)
-                score = -self.quiesce(board, -beta, -alpha, start_time, time_limit)
+                score = -self.quiesce(board, -beta, -alpha,
+                                      start_time, time_limit)
                 board.undoMove()
                 if (score >= beta):
                     return beta
@@ -366,6 +380,19 @@ class Agent:
 
 # state = GameState()
 
+# state.board = ['bN', 'bB', 'bQ', 'bK', 'bB', '--',
+#                'bp', 'bp', 'bp', 'bp', 'bp', 'bp',
+#                '--', '--', '--', '--', 'bN', '--',
+#                '--', '--', '--', 'wp', 'wN', '--',
+#                'wp', 'wp', 'wp', '--', 'wp', 'wp',
+#                'wN', 'wB', 'wQ', 'wK', 'wB', '--']
+
+
+# eval = agent.evaluatePosition(state)
+# print(eval)
+
 # agent.findBestMove(state)
 
-# print("Der move: ", agent.move_queue)
+
+
+
