@@ -2,9 +2,9 @@ from queue import Queue
 import time
 import copy
 import random
-import sys
-sys.path.append(
-    '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
+# import sys
+# sys.path.append(
+#     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
 
 from ChessEngine import GameState
 
@@ -119,7 +119,7 @@ class Agent:
         depth = 2
 
         start_time = time.time()
-        time_limit = 2.8  # Zeitlimit in Sekunden
+        time_limit = 19  # Zeitlimit in Sekunden
         bestMove = {
             'best_move': None,
             'best_value': bestValue
@@ -150,7 +150,7 @@ class Agent:
                 break
             
             # Debugging
-            print("Tiefe: ", depth-1, "   Move: ", bestMoveForDepth.pieceMoved, bestMoveForDepth.getChessNotation())
+            # print("Tiefe: ", depth-1, "   Move: ", bestMoveForDepth.pieceMoved, bestMoveForDepth.getChessNotation())
             
             # deepest move wird nur aktualisiert, falls die berechnung durchgelaufen ist
             if bestValue > bestMove['best_value'] :
@@ -158,7 +158,7 @@ class Agent:
                 bestMove['best_value'] = bestValue
 
 
-        print("Der beste Move ist: ", bestMove['best_move'], "   score: ", self.evaluatePosition(gs))
+        # print("Der beste Move ist: ", bestMove['best_move'], "   score: ", self.evaluatePosition(gs))
 
         # choose best Move
         self.update_move(

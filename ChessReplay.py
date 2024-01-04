@@ -5,6 +5,17 @@ Created on Mon Apr 19 08:41:16 2021
 This file is responsible for handling user input and displaying the current GameState object
 
 """
+from ast import literal_eval as make_tuple
+import statistics as np
+import importlib.util
+from multiprocessing import Process, Queue, freeze_support
+from sys import exit
+from student_agents.template2 import Agent as Agent2
+from student_agents.template import Agent as Agent1
+from agents.replay import MrReplay
+from agents.random import MrRandom
+import ChessEngine
+import pygame as py
 import json
 import multiprocessing
 import pathlib
@@ -15,22 +26,11 @@ import os
 import os.path as osp
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
-import pygame as py
-import ChessEngine
-from agents.random import MrRandom
 try:
     from agents.expert import MrExpert
     from agents.novice import MrNovice
 except ModuleNotFoundError:
     print('Skipping import of MrExpert and MrNovice ...')
-from agents.replay import MrReplay
-from student_agents.template import Agent as Agent1
-from student_agents.template2 import Agent as Agent2
-from sys import exit
-from multiprocessing import Process, Queue, freeze_support
-import importlib.util
-import statistics as np
-from ast import literal_eval as make_tuple
 
 # Opening JSON file
 with open('Settings.json') as f:
@@ -49,11 +49,10 @@ BOARD_COLOR = data["Board color"]
 # 0 if human player
 # 1 nega max with alpha-beta, move ordering, no threefold , piecepositions
 # 2 nega max with alpha-beta no position score <-- is bad
-# 3 nega max with alpha-beta threefold 
+# 3 nega max with alpha-beta threefold
 # 4 nega max with alpha-beta no move order
-# 5 nega max with alpha-beta, move ordering, no threefold , piecepositions * 0.1 
+# 5 nega max with alpha-beta, move ordering, no threefold , piecepositions * 0.1
 # 17 random
-
 
 
 # global colors
@@ -63,7 +62,8 @@ BOARD_COLOR = data["Board color"]
 #     colors = [py.Color((240, 217, 181)), py.Color((181, 136, 99))]  # these are the lichess.org standard colors
 
 # py.init()  # initializing pygame
-BOARD_WIDTH = BOARD_HEIGHT = 400  # size of the board in pixels, the larger the number the worse the resolution
+# size of the board in pixels, the larger the number the worse the resolution
+BOARD_WIDTH = BOARD_HEIGHT = 400
 DIMENSION = 6  # dimensions of a chess board in Diana Chess are 6x6
 MOVE_LOG_PANEL_WIDTH = 250
 MOVE_LOG_PANEL_HEIGHT = BOARD_HEIGHT
@@ -83,9 +83,11 @@ def loadImages():
     None.
 
     """
-    pieces = ["wp", "wR", "wN", "wB", "wK", "wQ", "bp", "bR", "bN", "bB", "bK", "bQ"]
+    pieces = ["wp", "wR", "wN", "wB", "wK",
+              "wQ", "bp", "bR", "bN", "bB", "bK", "bQ"]
     for piece in pieces:
-        IMAGES[piece] = py.transform.scale(py.image.load("images/" + piece + ".png"), (SQ_SIZE, SQ_SIZE))
+        IMAGES[piece] = py.transform.scale(py.image.load(
+            "images/" + piece + ".png"), (SQ_SIZE, SQ_SIZE))
     # Note: we can acess an image by saying 'IMAGES["wp"]'
 
 
@@ -110,7 +112,8 @@ def main(args):
         if osp.isfile(args.output_file):
             os.remove(args.output_file)
 
-        pathlib.Path(os.path.dirname(args.output_file)).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(os.path.dirname(args.output_file)).mkdir(
+            parents=True, exist_ok=True)
         with open(args.output_file, 'w+') as f:
             pass
 
@@ -130,22 +133,24 @@ def main(args):
         elif path_or_name == 'Agent2':
             agent = Agent2
         else:
-            spec = importlib.util.spec_from_file_location("Agent", path_or_name)
+            spec = importlib.util.spec_from_file_location(
+                "Agent", path_or_name)
             foo = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(foo)
             agent = foo.Agent
 
         return agent
-    
-    assert (args.agent1 == 'MrReplay' and args.agent2 == 'MrReplay') or (args.agent1 != 'MrReplay' and args.agent2 != 'MrReplay')
+
+    assert (args.agent1 == 'MrReplay' and args.agent2 == 'MrReplay') or (
+        args.agent1 != 'MrReplay' and args.agent2 != 'MrReplay')
 
     agent1 = return_agent(args.agent1)
     agent2 = return_agent(args.agent2)
 
-
     py.init()
     if args.use_gui:
-        screen = py.display.set_mode((BOARD_WIDTH + MOVE_LOG_PANEL_WIDTH, BOARD_HEIGHT + CLOCK_PANEL_HEIGHT))
+        screen = py.display.set_mode(
+            (BOARD_WIDTH + MOVE_LOG_PANEL_WIDTH, BOARD_HEIGHT + CLOCK_PANEL_HEIGHT))
     clock = py.time.Clock()
     # screen.fill(py.Color("white"))
     game_state = ChessEngine.GameState()
@@ -155,7 +160,8 @@ def main(args):
     loadImages()  # only do this once, before the while loop
     running = True
     sqSelected = ()  # no square is selected, keep track of the last click of the user (tuple: (row,col))
-    playerClicks = []  # keep track of player clicks (two tuples: [(6,4),(4,4)])
+    # keep track of player clicks (two tuples: [(6,4),(4,4)])
+    playerClicks = []
     game_over = False
     ai_thinking = False
     move_undone = False
@@ -179,10 +185,10 @@ def main(args):
     average_depth_per_game = []
 
     # clock logic
-    clock_counter, clock_text = args.time_control, str(args.time_control).rjust(3)
+    clock_counter, clock_text = args.time_control, str(
+        args.time_control).rjust(3)
     py.time.set_timer(py.USEREVENT, 1000)
     clock_font = py.font.SysFont('Consolas', 40)
-
 
     agent_args = dict()
     if args.agent1 == 'MrReplay':
@@ -203,11 +209,10 @@ def main(args):
         else:
             print('Either --game_log_file or --game_log_str must be passed for replay.')
             sys.exit(1)
-        
+
         q = Queue()
         q.put(0)
         agent_args = {'move_log': move_log, 'color': q}
-
 
     if agent1:
         chessai_white = agent1(**agent_args)
@@ -221,12 +226,14 @@ def main(args):
         chessai_black = agent2(**agent_args)
 
     while running:
-        human_turn = (game_state.whiteToMove and playerOne) or (not game_state.whiteToMove and playerTwo)
+        human_turn = (game_state.whiteToMove and playerOne) or (
+            not game_state.whiteToMove and playerTwo)
         for e in py.event.get():
             # remaining clocktime logic
             if e.type == py.USEREVENT and not waiting:
                 clock_counter -= 1
-                clock_text = str(clock_counter).rjust(3) if clock_counter >= 0 else 'GAME OVER'
+                clock_text = str(clock_counter).rjust(
+                    3) if clock_counter >= 0 else 'GAME OVER'
             # quitting the application
             if e.type == py.QUIT:
                 running = False
@@ -241,14 +248,17 @@ def main(args):
                     # bugfix where col or row can be 6 when the outer rim is clicked
                     if row >= 5:
                         row = 5
-                    if sqSelected == (row, col) or col >= 6:  # the user clicked the same square twice
+                    # the user clicked the same square twice
+                    if sqSelected == (row, col) or col >= 6:
                         sqSelected = ()  # deselect
                         playerClicks = []  # clear player clicks
                     else:
                         sqSelected = (row, col)
-                        playerClicks.append(sqSelected)  # append for both 1st and 2nd clicks
+                        # append for both 1st and 2nd clicks
+                        playerClicks.append(sqSelected)
                     if len(playerClicks) == 2 and human_turn:  # after 2nd click
-                        move = ChessEngine.Move(playerClicks[0], playerClicks[1], game_state.board)
+                        move = ChessEngine.Move(
+                            playerClicks[0], playerClicks[1], game_state.board)
                         # checks wether move is a valid move
                         for i in range(len(valid_moves)):
                             if move == valid_moves[i]:
@@ -268,7 +278,7 @@ def main(args):
 
             # key operations
             elif e.type == py.KEYDOWN:
-                #if e.key == py.K_u:  # undo when "u" is pressed
+                # if e.key == py.K_u:  # undo when "u" is pressed
                 #    game_state.undoMove()
                 #    if halfmoveClock != 0:
                 #        halfmoveClock -= 1
@@ -279,7 +289,7 @@ def main(args):
                 #        move_finder_process.terminate()
                 #        ai_thinking = False
                 #    move_undone = False
-                #if e.key == py.K_r:  # reset the board when "r" is pressed
+                # if e.key == py.K_r:  # reset the board when "r" is pressed
                 #    game_state = ChessEngine.GameState()
                 #    valid_moves = game_state.getValidMoves()
                 #    sqSelected = ()
@@ -306,7 +316,8 @@ def main(args):
                 return_queue = Queue()  # used to pass data between threads
                 chessai.clear_queue(return_queue)
 
-                move_finder_process = Process(target=chessai.findBestMove, args=(game_state, ))
+                move_finder_process = Process(
+                    target=chessai.findBestMove, args=(game_state, ))
                 move_finder_process.start()
                 start_time = time.time()
                 # print("AI is thinking ... ")
@@ -323,11 +334,13 @@ def main(args):
 
                 def illegal_move_made(gs):
                     if args.verbose:
-                        s = f"Illegal move made by {'white' if gs.whiteToMove else 'black'}"
+                        s = f"Illegal move made by {
+                            'white' if gs.whiteToMove else 'black'}"
                         print(s)
                         if args.output_file:
                             if not osp.isfile(args.output_file):
-                                raise SystemExit(str(args.output_file) + ' does no longer exist!')
+                                raise SystemExit(
+                                    str(args.output_file) + ' does no longer exist!')
                             with open(args.output_file, 'a') as f:
                                 f.write(s + '\n')
                     gs.illegal_move_done = True
@@ -342,7 +355,8 @@ def main(args):
                     illegal_move_made(game_state)
 
                 if not game_state.illegal_move_done:
-                    ai_move = ChessEngine.Move((ai_move.startRow, ai_move.startCol), (ai_move.endRow, ai_move.endCol), game_state.board)
+                    ai_move = ChessEngine.Move(
+                        (ai_move.startRow, ai_move.startCol), (ai_move.endRow, ai_move.endCol), game_state.board)
                     if not ai_move in game_state.getValidMoves():
                         game_state.illegal_move_done = True
 
@@ -357,7 +371,8 @@ def main(args):
                         print(s)
                         if args.output_file:
                             if not osp.isfile(args.output_file):
-                                raise SystemExit(str(args.output_file) + ' does no longer exist!')
+                                raise SystemExit(
+                                    str(args.output_file) + ' does no longer exist!')
                             with open(args.output_file, 'a') as f:
                                 f.write(s)
                     # if ai_move is None:
@@ -376,19 +391,22 @@ def main(args):
         if move_made:
             if args.use_gui:
                 if animate:
-                    animateMove(game_state.moveLog[-1], screen, game_state.board, clock)
+                    animateMove(
+                        game_state.moveLog[-1], screen, game_state.board, clock)
             valid_moves = game_state.getValidMoves()
             move_made = False
             animate = False
             clock_counter = args.time_control + 1
 
         if args.use_gui:
-            drawGameState(screen, game_state, valid_moves, sqSelected, moveLogFont)
+            drawGameState(screen, game_state, valid_moves,
+                          sqSelected, moveLogFont)
 
         # draw EndGameText
         if human_turn and clock_counter < 0 - 0.3:
             game_over = True
-            text = f"{'Black' if game_state.whiteToMove else 'White'} wins on time"
+            text = f"{
+                'Black' if game_state.whiteToMove else 'White'} wins on time"
             if args.use_gui:
                 drawEndGameText(screen, text)
 
@@ -405,7 +423,8 @@ def main(args):
             elif game_state.draw:
                 text = "Draw by insufficient material"
             elif game_state.illegal_move_done:
-                text = f"{'White' if game_state.whiteToMove else 'Black'} wins by illegal move"
+                text = f"{
+                    'White' if game_state.whiteToMove else 'Black'} wins by illegal move"
             elif game_state.staleMate:
                 text = 'Draw by stalemate'
             else:
@@ -428,7 +447,8 @@ def main(args):
                         with open(args.output_file, 'a') as f:
                             f.write(str(GameTable) + "\n")
                             if average_depth_per_move:
-                                f.write(str(np.mean(average_depth_per_move)) + '\n')
+                                f.write(
+                                    str(np.mean(average_depth_per_move)) + '\n')
                 average_depth_per_move = []
                 # same as py.event K_r
                 game_state = ChessEngine.GameState()
@@ -460,9 +480,11 @@ def main(args):
                     f.write('Final Results:\n')
                     f.write(str(GameTable))
                     if average_depth_per_move:
-                        f.write('avg depth:' + str(np.mean(average_depth_per_move)) + '\n')
+                        f.write('avg depth:' +
+                                str(np.mean(average_depth_per_move)) + '\n')
                     if average_depth_per_game:
-                        f.write('avg depth overall:' + str(np.mean(average_depth_per_game)))
+                        f.write('avg depth overall:' +
+                                str(np.mean(average_depth_per_game)))
             num_games -= 1
             if not args.use_gui:
                 raise SystemExit()
@@ -500,7 +522,7 @@ def drawGameState(screen, gs, validMoves, sqSelected, moveLogFont):
 def drawBoard(screen):
     """
     Draws the squares on the board. The top left square is always light.
-    
+
 
     Parameters
     ----------
@@ -514,14 +536,18 @@ def drawBoard(screen):
     """
     global colors
     if BOARD_COLOR == 1:
-        colors = [py.Color((235, 235, 208)), py.Color((119, 148, 85))]  # these are the chess.com standard colors
+        # these are the chess.com standard colors
+        colors = [py.Color((235, 235, 208)), py.Color((119, 148, 85))]
     elif BOARD_COLOR == 2:
-        colors = [py.Color((240, 217, 181)), py.Color((181, 136, 99))]  # these are the lichess.org standard colors
+        # these are the lichess.org standard colors
+        colors = [py.Color((240, 217, 181)), py.Color((181, 136, 99))]
 
     for r in range(DIMENSION):
         for c in range(DIMENSION):
-            color = colors[(r + c) % 2]  # a chessboard square row + column is always white when its an even number
-            py.draw.rect(screen, color, py.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+            # a chessboard square row + column is always white when its an even number
+            color = colors[(r + c) % 2]
+            py.draw.rect(screen, color, py.Rect(
+                c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 
 def highlightSquares(screen, gs, validMoves, sqSelected):
@@ -554,7 +580,8 @@ def highlightSquares(screen, gs, validMoves, sqSelected):
     if sqSelected != ():
         r, c = sqSelected
         rc = r * 6 + c
-        if gs.board[rc][0] == ("w" if gs.whiteToMove else "b"):  # sqSelected is a piece that can be moved
+        # sqSelected is a piece that can be moved
+        if gs.board[rc][0] == ("w" if gs.whiteToMove else "b"):
             # highlight selected square
             s = py.Surface((SQ_SIZE, SQ_SIZE))
             s.set_alpha(100)  # transparancy value -> 0 transparent; 255 opaque
@@ -564,13 +591,14 @@ def highlightSquares(screen, gs, validMoves, sqSelected):
             s.fill(py.Color("yellow"))
             for move in validMoves:
                 if move.startRow == r and move.startCol == c:
-                    screen.blit(s, (move.endCol * SQ_SIZE, move.endRow * SQ_SIZE))
+                    screen.blit(
+                        s, (move.endCol * SQ_SIZE, move.endRow * SQ_SIZE))
 
 
 def drawPieces(screen, board):
     """
     Draws the pieces on the board using current GameState.board
-    
+
 
     Parameters
     ----------
@@ -591,7 +619,8 @@ def drawPieces(screen, board):
 
             piece = board[rc]
             if piece != "--":  # not empty square
-                screen.blit(IMAGES[piece], py.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+                screen.blit(IMAGES[piece], py.Rect(
+                    c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 
 def animateMove(move, screen, board, clock):
@@ -620,15 +649,18 @@ def animateMove(move, screen, board, clock):
     framesPerSquare = 10  # frames to move one square
     frameCount = (abs(dR) + abs(dC)) * framesPerSquare
     for frame in range(frameCount + 1):
-        r, c = (move.startRow + dR * frame / frameCount, move.startCol + dC * frame / frameCount)
+        r, c = (move.startRow + dR * frame / frameCount,
+                move.startCol + dC * frame / frameCount)
         drawBoard(screen)
         drawPieces(screen, board)
         # erase the piece moved from its ending square
         color = colors[(move.endRow + move.endCol) % 2]
-        endSquare = py.Rect(move.endCol * SQ_SIZE, move.endRow * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+        endSquare = py.Rect(move.endCol * SQ_SIZE,
+                            move.endRow * SQ_SIZE, SQ_SIZE, SQ_SIZE)
         py.draw.rect(screen, color, endSquare)
         # drawing moving piece
-        screen.blit(IMAGES[move.pieceMoved], py.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+        screen.blit(IMAGES[move.pieceMoved], py.Rect(
+            c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
         py.display.flip()
         clock.tick(144)  # fps
 
@@ -651,7 +683,8 @@ def drawMoveLog(screen, gs, font):
     None.
 
     """
-    moveLogRect = py.Rect(BOARD_WIDTH, 0, MOVE_LOG_PANEL_WIDTH, MOVE_LOG_PANEL_HEIGHT)
+    moveLogRect = py.Rect(
+        BOARD_WIDTH, 0, MOVE_LOG_PANEL_WIDTH, MOVE_LOG_PANEL_HEIGHT)
     py.draw.rect(screen, py.Color((39, 37, 34)), moveLogRect)
     moveLog = gs.moveLog
     moveTexts = []
@@ -700,7 +733,7 @@ def drawClock(screen):
 
 def drawEndGameText(screen, text):
     """
-    
+
 
     Parameters
     ----------
