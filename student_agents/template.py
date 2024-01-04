@@ -1,6 +1,11 @@
-import random
+import sys
+sys.path.append(
+    '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
 
-from ..ChessEngine import GameState
+import random
+from ChessEngine import GameState
+import copy
+import time
 
 
 class Agent:
@@ -14,7 +19,7 @@ class Agent:
         self.globalBestMove = None
         self.globalBestScore = None
         self.nextMoveScore = None
-        self.is_turn = False
+        self.turn = False
         self.color = None
 
         self.piece_tables = {
@@ -86,7 +91,7 @@ class Agent:
             current state of the game
         Returns
         -------
-        none
+        Move
 
         """
         # Now it's our turn
@@ -99,7 +104,96 @@ class Agent:
                 self.color = 'Black'
 
         validMoves = gs.getValidMoves()
-        pass
+        
+        # copy of current board state
+        current_board = copy.deepcopy(gs)
+        
+        # theoretisch noch openings lernen mit try : opening, except: minmax
+
+        bestMove = None
+        bestValue = -99999
+        alpha = -100000
+        beta = 100000
+        # Choose calculation depth here
+        depth = 2
+        
+        start_time = time.time()
+        time_limit = 2.8  # Zeitlimit in Sekunden
+        
+
+        while True:
+            for move in validMoves:
+                gs.makeMove(move)
+                boardValue = -self.alphabeta(gs, -beta, -alpha, depth - 1, start_time, time_limit)
+                if boardValue > bestValue:
+                    bestValue = boardValue
+                    bestMove = move
+                if boardValue > alpha:
+                    alpha = boardValue
+
+                elapsed_time = time.time() - start_time
+                if elapsed_time >= time_limit:
+                    break
+                
+                gs = current_board  # zurück zum aktuellen Zustand
+
+            depth += 1  # Erhöhe die Tiefe für den nächsten Iterationsschritt
+
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= time_limit:
+                break
+        
+        gs.makeMove(bestMove)
+        new_position = gs
+        gs = current_board
+        
+        print("Der beste Move ist: ",bestMove)
+        
+        # choose best Move
+        self.update_move(bestMove, self.evaluatePosition(new_position), depth)
+
+
+    def alphabeta(self, board, alpha, beta, depthleft, start_time, time_limit):
+        bestscore = -9999
+        elapsed_time = time.time() - start_time # consider time_limit
+        if elapsed_time >= time_limit:
+            return bestscore
+        
+        if (depthleft == 0):
+            return self.quiesce(board, alpha, beta, start_time, time_limit)
+        for move in board.getValidMoves():
+            board.makeMove(move)
+            score = -self.alphabeta(board, -beta, -alpha, depthleft - 1, start_time, time_limit)
+            board.undoMove()
+            if (score >= beta):
+                return score
+            if (score > bestscore):
+                bestscore = score
+            if (score > alpha):
+                alpha = score
+        return bestscore
+
+    def quiesce(self, board, alpha, beta, start_time, time_limit):
+        # check time
+        elapsed_time = time.time() - start_time
+        if elapsed_time >= time_limit:
+            return alpha
+        
+        stand_pat = self.evaluatePosition(board)
+        if (stand_pat >= beta):
+            return beta
+        if (alpha < stand_pat):
+            alpha = stand_pat
+        for move in board.getValidMoves():
+            if move.isCapture :
+                board.makeMove(move)
+                score = -self.quiesce(board, -beta, -alpha, start_time, time_limit)
+                board.undoMove()
+                if (score >= beta):
+                    return beta
+                if (score > alpha):
+                    alpha = score
+        return alpha
 
     def evaluatePosition(self, gs):
         """
@@ -197,7 +291,7 @@ class Agent:
         """
 
         # material score
-        material = 100 * (piece_counts['wP'] - piece_counts['bP']) + \
+        material = 100 * (piece_counts['wp'] - piece_counts['bp']) + \
             320 * (piece_counts['wN'] - piece_counts['bN']) + \
             330 * (piece_counts['wB'] - piece_counts['bB']) + \
             900 * (piece_counts['wQ'] - piece_counts['bQ'])
@@ -268,10 +362,10 @@ class Agent:
         return piece_value
 
 
-agent = Agent()
+# agent = Agent()
 
-board = GameState()
+# state = GameState()
 
-eval = agent.evaluatePosition(board)
+# agent.findBestMove(state)
 
-print(eval)
+# print("Der move: ", agent.move_queue)
