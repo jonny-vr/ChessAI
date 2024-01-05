@@ -6,7 +6,7 @@ import random
 # sys.path.append(
 #     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
 
-from ChessEngine import GameState
+# from ChessEngine import GameState
 
 
 class Agent:
@@ -119,7 +119,7 @@ class Agent:
         depth = 2
 
         start_time = time.time()
-        time_limit = 19  # Zeitlimit in Sekunden
+        time_limit = 1.8  # Zeitlimit in Sekunden
         bestMove = {
             'best_move': None,
             'best_value': bestValue
