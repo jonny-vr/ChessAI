@@ -1,17 +1,16 @@
+from ChessEngine import GameState
 from queue import Queue
 import time
 import copy
 import random
-# import sys
-# sys.path.append(
-#     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
-
-# from ChessEngine import GameState
+import sys
+sys.path.append(
+    '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
 
 
 class Agent:
     def __init__(self):
-        self.move_queue = None #Queue() # wieder ändern zum starten
+        self.move_queue = None  # wieder ändern zum starten
         self.nextMove = None
         self.counter = None
         self.currentDepth = None
@@ -33,9 +32,9 @@ class Agent:
                 50, 50, 50, 50, 50, 50
             ],
             'n': [
-                -50, -30, -30, -30, -30, -50,
-                -30, 10, 15, 15, 10, -30,
-                -30, 15, 30, 30, 15, -30,
+                -10, -30, -30, -30, -30, -10,
+                -30, 5, 20, 20, 5, -30,
+                -30, 0, 30, 30, 0, -30,
                 -30, 15, 30, 30, 15, -30,
                 -30, 10, 15, 15, 10, -30,
                 -50, -30, -30, -30, -30, -50
@@ -95,8 +94,7 @@ class Agent:
         Move
 
         """
-        # Now it's our turn
-        self.turn = True
+
         # Set Color initially
         if self.color == None:
             if gs.whiteToMove == True:
@@ -105,11 +103,6 @@ class Agent:
                 self.color = 'Black'
 
         validMoves = gs.getValidMoves()
-
-        # copy of current board state
-        current_board = copy.deepcopy(gs)
-
-        # theoretisch noch openings lernen mit try : opening, except: minmax
 
         bestMove = None
         bestValue = -99999
@@ -127,6 +120,10 @@ class Agent:
 
         while True:
             for move in validMoves:
+                elapsed_time = time.time() - start_time
+                if elapsed_time >= time_limit:
+                    break
+
                 gs.makeMove(move)
                 boardValue = - \
                     self.alphabeta(gs, -beta, -alpha, depth -
@@ -137,32 +134,26 @@ class Agent:
                 if boardValue > alpha:
                     alpha = boardValue
 
-                elapsed_time = time.time() - start_time
-                if elapsed_time >= time_limit:
-                    break
-
                 gs.undoMove()  # zurück zum aktuellen Zustand
 
             depth += 1  # Erhöhe die Tiefe für den nächsten Iterationsschritt
 
-            elapsed_time = time.time() - start_time
-            if elapsed_time >= time_limit:
-                break
-            
             # Debugging
             # print("Tiefe: ", depth-1, "   Move: ", bestMoveForDepth.pieceMoved, bestMoveForDepth.getChessNotation())
-            
+
             # deepest move wird nur aktualisiert, falls die berechnung durchgelaufen ist
-            if bestValue > bestMove['best_value'] :
+            if bestValue > bestMove['best_value']:
                 bestMove['best_move'] = bestMoveForDepth
                 bestMove['best_value'] = bestValue
 
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= time_limit:
+                break
 
-        # print("Der beste Move ist: ", bestMove['best_move'], "   score: ", self.evaluatePosition(gs))
-
-        # choose best Move
-        self.update_move(
-            bestMove['best_move'], self.evaluatePosition(gs), depth)
+        print("Der beste Move ist: ", bestMove['best_move'].getChessNotation(
+        ), "   score: ", self.evaluatePosition(gs))
+        self.update_move(bestMove['best_move'],
+                         self.evaluatePosition(gs), depth)
 
     def alphabeta(self, board, alpha, beta, depthleft, start_time, time_limit):
         bestscore = -9999
@@ -172,8 +163,16 @@ class Agent:
 
         if (depthleft == 0):
             return self.quiesce(board, alpha, beta, start_time, time_limit)
-            
-        for move in board.getValidMoves():
+
+        validMoves = board.getValidMoves()
+
+        # optimize order for captures
+        capturesFirst = self.optimizeForCaptures(board.getValidMoves())
+        # sort by simple heuristic
+        optimizedMoves = sorted(
+            capturesFirst, key=lambda move: self.see(move, board))
+
+        for move in optimizedMoves:
             board.makeMove(move)
             score = -self.alphabeta(board, -beta, -alpha,
                                     depthleft - 1, start_time, time_limit)
@@ -197,7 +196,12 @@ class Agent:
             return beta
         if (alpha < stand_pat):
             alpha = stand_pat
-        for move in board.getValidMoves():
+
+        capturesFirst = self.optimizeForCaptures(board.getValidMoves())
+        optimizedMoves = sorted(
+            capturesFirst, key=lambda move: self.see(move, board))
+
+        for move in optimizedMoves:
             if move.isCapture:
                 board.makeMove(move)
                 score = -self.quiesce(board, -beta, -alpha,
@@ -208,6 +212,20 @@ class Agent:
                 if (score > alpha):
                     alpha = score
         return alpha
+
+    def optimizeForCaptures(self, validMoves):
+        capture_moves = [move for move in validMoves if move.isCapture]
+        other_moves = [
+            move for move in validMoves if move not in capture_moves]
+        return capture_moves + other_moves
+
+    # simple heuristic 
+    def see(self, move, board) :
+        board.makeMove(move)
+        eval = self.evaluatePosition(board)
+        board.undoMove()
+        return eval
+
 
     def evaluatePosition(self, gs):
         """
@@ -221,8 +239,10 @@ class Agent:
 
         """
         # check for checkmate / stalemate / draw
+        myTurn = gs.whiteToMove and self.color == 'White' or not gs.whiteToMove and self.color == 'Black'
+
         if gs.checkMate:
-            if self.turn:
+            if myTurn:
                 return -9999
             else:
                 return 9999
@@ -380,19 +400,19 @@ class Agent:
 
 # state = GameState()
 
-# state.board = ['bN', 'bB', 'bQ', 'bK', 'bB', '--',
+# state.board = ['bN', 'bB', 'bQ', 'bK', 'bB', 'wN',
 #                'bp', 'bp', 'bp', 'bp', 'bp', 'bp',
-#                '--', '--', '--', '--', 'bN', '--',
-#                '--', '--', '--', 'wp', 'wN', '--',
+#                '--', '--', '--', '--', '--', '--',
+#                '--', '--', '--', 'wp', '--', '--',
 #                'wp', 'wp', 'wp', '--', 'wp', 'wp',
-#                'wN', 'wB', 'wQ', 'wK', 'wB', '--']
+#                'wN', 'wB', 'wQ', 'wK', 'wB', 'wN']
 
+# state.whiteToMove = False
 
 # eval = agent.evaluatePosition(state)
 # print(eval)
 
-# agent.findBestMove(state)
+# bestMove = agent.findBestMove(state)
+# state.makeMove(bestMove)
 
-
-
-
+# print(state.moveLog)
