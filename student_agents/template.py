@@ -1,4 +1,5 @@
-from ChessEngine import GameState
+
+
 from queue import Queue
 import time
 import copy
@@ -6,11 +7,11 @@ import random
 import sys
 sys.path.append(
     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
-
+from ChessEngine import GameState
 
 class Agent:
     def __init__(self):
-        self.move_queue = None  # wieder ändern zum starten
+        self.move_queue = Queue()  # wieder ändern zum starten
         self.nextMove = None
         self.counter = None
         self.currentDepth = None
@@ -103,79 +104,54 @@ class Agent:
                 self.color = 'Black'
 
         validMoves = gs.getValidMoves()
+        initial_queue = self.move_queue
 
         bestMove = None
         bestValue = -99999
         alpha = -100000
         beta = 100000
         # Choose calculation depth here
-        depth = 2
-
-        start_time = time.time()
-        time_limit = 1.8  # Zeitlimit in Sekunden
-        bestMove = {
-            'best_move': None,
-            'best_value': bestValue
-        }
+        depth = 1
+        optimizedMoves = sorted(
+            validMoves, key=lambda move: self.see(move, gs))
 
         while True:
-            for move in validMoves:
-                elapsed_time = time.time() - start_time
-                if elapsed_time >= time_limit:
-                    break
-
+            for move in optimizedMoves:
                 gs.makeMove(move)
                 boardValue = - \
-                    self.alphabeta(gs, -beta, -alpha, depth -
-                                   1, start_time, time_limit)
+                    self.alphabeta(gs, -beta, -alpha, depth - 1)
                 if boardValue > bestValue:
                     bestValue = boardValue
-                    bestMoveForDepth = move
+                    bestMove = move
                 if boardValue > alpha:
                     alpha = boardValue
 
                 gs.undoMove()  # zurück zum aktuellen Zustand
 
             depth += 1  # Erhöhe die Tiefe für den nächsten Iterationsschritt
+            self.clear_queue(initial_queue)
+            self.update_move(bestMove,
+                             self.see(bestMove, gs), depth)
+          
 
-            # Debugging
-            # print("Tiefe: ", depth-1, "   Move: ", bestMoveForDepth.pieceMoved, bestMoveForDepth.getChessNotation())
-
-            # deepest move wird nur aktualisiert, falls die berechnung durchgelaufen ist
-            if bestValue > bestMove['best_value']:
-                bestMove['best_move'] = bestMoveForDepth
-                bestMove['best_value'] = bestValue
-
-            elapsed_time = time.time() - start_time
-            if elapsed_time >= time_limit:
-                break
-
-        print("Der beste Move ist: ", bestMove['best_move'].getChessNotation(
-        ), "   score: ", self.evaluatePosition(gs))
-        self.update_move(bestMove['best_move'],
-                         self.evaluatePosition(gs), depth)
-
-    def alphabeta(self, board, alpha, beta, depthleft, start_time, time_limit):
+    def alphabeta(self, board, alpha, beta, depthleft):
         bestscore = -9999
-        elapsed_time = time.time() - start_time  # consider time_limit
-        if elapsed_time >= time_limit:
-            return bestscore
 
         if (depthleft == 0):
-            return self.quiesce(board, alpha, beta, start_time, time_limit)
+            return self.quiesce(board, alpha, beta)
 
         validMoves = board.getValidMoves()
 
         # optimize order for captures
-        capturesFirst = self.optimizeForCaptures(board.getValidMoves())
+        # capturesFirst = self.optimizeForCaptures(validMoves)
         # sort by simple heuristic
         optimizedMoves = sorted(
-            capturesFirst, key=lambda move: self.see(move, board))
+            validMoves, key=lambda move: self.see(move, board))
 
         for move in optimizedMoves:
             board.makeMove(move)
             score = -self.alphabeta(board, -beta, -alpha,
-                                    depthleft - 1, start_time, time_limit)
+                                    depthleft - 1)
             board.undoMove()
             if (score >= beta):
                 return score
@@ -185,27 +161,22 @@ class Agent:
                 alpha = score
         return bestscore
 
-    def quiesce(self, board, alpha, beta, start_time, time_limit):
-        # check time
-        elapsed_time = time.time() - start_time
-        if elapsed_time >= time_limit:
-            return alpha
-
+    def quiesce(self, board, alpha, beta):
         stand_pat = self.evaluatePosition(board)
         if (stand_pat >= beta):
             return beta
         if (alpha < stand_pat):
             alpha = stand_pat
 
-        capturesFirst = self.optimizeForCaptures(board.getValidMoves())
+        validMoves = board.getValidMoves()
+        # capturesFirst = self.optimizeForCaptures(validMoves)
         optimizedMoves = sorted(
-            capturesFirst, key=lambda move: self.see(move, board))
+            validMoves, key=lambda move: self.see(move, board))
 
         for move in optimizedMoves:
             if move.isCapture:
                 board.makeMove(move)
-                score = -self.quiesce(board, -beta, -alpha,
-                                      start_time, time_limit)
+                score = -self.quiesce(board, -beta, -alpha)
                 board.undoMove()
                 if (score >= beta):
                     return beta
@@ -219,13 +190,12 @@ class Agent:
             move for move in validMoves if move not in capture_moves]
         return capture_moves + other_moves
 
-    # simple heuristic 
-    def see(self, move, board) :
+    # simple heuristic
+    def see(self, move, board):
         board.makeMove(move)
         eval = self.evaluatePosition(board)
         board.undoMove()
         return eval
-
 
     def evaluatePosition(self, gs):
         """
@@ -400,19 +370,20 @@ class Agent:
 
 # state = GameState()
 
-# state.board = ['bN', 'bB', 'bQ', 'bK', 'bB', 'wN',
-#                'bp', 'bp', 'bp', 'bp', 'bp', 'bp',
+# state.board = ['--', 'bB', '--', 'bK', 'bB', '--',
+#                'bp', 'wp', '--', '--', 'bp', 'bp',
 #                '--', '--', '--', '--', '--', '--',
-#                '--', '--', '--', 'wp', '--', '--',
-#                'wp', 'wp', 'wp', '--', 'wp', 'wp',
-#                'wN', 'wB', 'wQ', 'wK', 'wB', 'wN']
+#                '--', 'wN', 'wK', 'wp', '--', '--',
+#                'bN', '--', '--', 'wN', '--', 'wp',
+#                '--', '--', '--', '--', 'wB', '--']
 
-# state.whiteToMove = False
+
 
 # eval = agent.evaluatePosition(state)
 # print(eval)
 
-# bestMove = agent.findBestMove(state)
-# state.makeMove(bestMove)
 
-# print(state.moveLog)
+
+
+
+
