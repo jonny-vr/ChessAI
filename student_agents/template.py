@@ -118,6 +118,10 @@ class Agent:
         while True:
             for move in optimizedMoves:
                 gs.makeMove(move)
+                gs.getValidMoves() # wegen bug, dass stalemate variable nur updated danach :/
+                if gs.staleMate or gs.draw or gs.threefold: # falls draw keine weiteren berechnungen
+                    gs.undoMove()
+                    continue
                 boardValue = - \
                     self.alphabeta(gs, -beta, -alpha, depth - 1)
                 if boardValue > bestValue:
@@ -150,6 +154,10 @@ class Agent:
 
         for move in optimizedMoves:
             board.makeMove(move)
+            board.getValidMoves() # wegen bug, dass stalemate variable nur updated danach :/
+            if board.staleMate or board.draw or board.threefold: # falls draw keine weiteren berechnungen
+                board.undoMove()
+                continue
             score = -self.alphabeta(board, -beta, -alpha,
                                     depthleft - 1)
             board.undoMove()
