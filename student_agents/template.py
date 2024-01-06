@@ -1,5 +1,6 @@
 
 
+from ChessEngine import GameState
 from queue import Queue
 import time
 import copy
@@ -7,7 +8,7 @@ import random
 import sys
 sys.path.append(
     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
-from ChessEngine import GameState
+
 
 class Agent:
     def __init__(self):
@@ -22,6 +23,7 @@ class Agent:
         self.nextMoveScore = None
         self.turn = False
         self.color = None
+        self.transpositionTable = {}
 
         self.piece_tables = {
             'p': [
@@ -112,12 +114,16 @@ class Agent:
         beta = 100000
         # Choose calculation depth here
         depth = 1
-        optimizedMoves = sorted(
-            validMoves, key=lambda move: self.see(move, gs))
+        optimizedMoves = self.optimizeForCaptures(validMoves)
 
         while True:
             for move in optimizedMoves:
                 gs.makeMove(move)
+                gs.getValidMoves()  # wegen bug, dass stalemate variable nur updated danach :/
+                if gs.staleMate or gs.draw or gs.threefold:  # falls draw keine weiteren berechnungen
+                    gs.undoMove()
+                    continue
+
                 boardValue = - \
                     self.alphabeta(gs, -beta, -alpha, depth - 1)
                 if boardValue > bestValue:
@@ -131,8 +137,7 @@ class Agent:
             depth += 1  # Erhöhe die Tiefe für den nächsten Iterationsschritt
             self.clear_queue(initial_queue)
             self.update_move(bestMove,
-                             self.see(bestMove, gs), depth)
-          
+                             self.evaluatePosition(gs), depth)
 
     def alphabeta(self, board, alpha, beta, depthleft):
         bestscore = -9999
@@ -145,11 +150,15 @@ class Agent:
         # optimize order for captures
         # capturesFirst = self.optimizeForCaptures(validMoves)
         # sort by simple heuristic
-        optimizedMoves = sorted(
-            validMoves, key=lambda move: self.see(move, board))
+        optimizedMoves = self.optimizeForCaptures(validMoves)
 
         for move in optimizedMoves:
             board.makeMove(move)
+            board.getValidMoves()  # wegen bug, dass stalemate variable nur updated danach :/
+            if board.staleMate or board.draw or board.threefold:  # falls draw keine weiteren berechnungen
+                board.undoMove()
+                continue
+
             score = -self.alphabeta(board, -beta, -alpha,
                                     depthleft - 1)
             board.undoMove()
@@ -170,8 +179,7 @@ class Agent:
 
         validMoves = board.getValidMoves()
         # capturesFirst = self.optimizeForCaptures(validMoves)
-        optimizedMoves = sorted(
-            validMoves, key=lambda move: self.see(move, board))
+        optimizedMoves = self.optimizeForCaptures(validMoves)
 
         for move in optimizedMoves:
             if move.isCapture:
@@ -184,6 +192,15 @@ class Agent:
                     alpha = score
         return alpha
 
+    def custom_hash(self, board):
+        # Board als String konvertieren
+        board_str = ''.join(board.board)
+
+        # Hash-Wert mit whiteToMove als String hinzufügen
+        final_hash = board_str + "#" + str(board.whiteToMove)
+
+        return final_hash
+
     def optimizeForCaptures(self, validMoves):
         capture_moves = [move for move in validMoves if move.isCapture]
         other_moves = [
@@ -191,11 +208,20 @@ class Agent:
         return capture_moves + other_moves
 
     # simple heuristic
-    def see(self, move, board):
-        board.makeMove(move)
-        eval = self.evaluatePosition(board)
-        board.undoMove()
-        return eval
+    # def see(self, move, board):
+    #     board.makeMove(move)
+    #     eval = self.evaluatePosition(board)
+    #     board.undoMove()
+    #     return eval
+    # def see(self, move, board):
+    #     eval_before = self.evaluatePosition(board)
+    #     board.makeMove(move)
+    #     eval_after = -self.evaluatePosition(board)
+    #     board.undoMove()
+    #     if board.whiteToMove:
+    #         return eval_after - eval_before
+    #     else:
+    #         return eval_before - eval_after
 
     def evaluatePosition(self, gs):
         """
@@ -208,6 +234,9 @@ class Agent:
         Score: Integer
 
         """
+        board_hash = self.custom_hash(gs)
+        if board_hash in self.transpositionTable:
+            return self.transpositionTable[board_hash]
         # check for checkmate / stalemate / draw
         myTurn = gs.whiteToMove and self.color == 'White' or not gs.whiteToMove and self.color == 'Black'
 
@@ -234,8 +263,10 @@ class Agent:
 
         # favorable position for white = unfavorable position for black
         if gs.whiteToMove:
+            self.transpositionTable[board_hash] = eval
             return eval
         else:
+            self.transpositionTable[board_hash] = -eval
             return -eval
 
     def count_chess_pieces(self, board):
@@ -378,12 +409,5 @@ class Agent:
 #                '--', '--', '--', '--', 'wB', '--']
 
 
-
 # eval = agent.evaluatePosition(state)
 # print(eval)
-
-
-
-
-
-
