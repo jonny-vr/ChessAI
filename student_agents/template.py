@@ -5,13 +5,13 @@ import time
 import copy
 import random
 import sys
-sys.path.append(
-    '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
-from ChessEngine import GameState
+# sys.path.append(
+#     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
+# from ChessEngine import GameState
 
 class Agent:
     def __init__(self):
-        self.move_queue = Queue()  # wieder ändern zum starten
+        self.move_queue = None  # wieder ändern zum starten
         self.nextMove = None
         self.counter = None
         self.currentDepth = None
@@ -146,9 +146,6 @@ class Agent:
 
         validMoves = board.getValidMoves()
 
-        # optimize order for captures
-        # capturesFirst = self.optimizeForCaptures(validMoves)
-        # sort by simple heuristic
         optimizedMoves = sorted(
             validMoves, key=lambda move: self.see(move, board))
 
@@ -177,7 +174,6 @@ class Agent:
             alpha = stand_pat
 
         validMoves = board.getValidMoves()
-        # capturesFirst = self.optimizeForCaptures(validMoves)
         optimizedMoves = sorted(
             validMoves, key=lambda move: self.see(move, board))
 
@@ -378,17 +374,15 @@ class Agent:
 
 # state = GameState()
 
-# state.board = ['--', 'bB', '--', 'bK', 'bB', '--',
-#                'bp', 'wp', '--', '--', 'bp', 'bp',
+# state.board = ['bK', '--', '--', '--', 'bB', '--',
+#                '--', '--', '--', 'wN', 'wp', '--',
+#                'bp', '--', '--', '--', '--', '--',
+#                'wp', '--', '--', '--', '--', '--',
 #                '--', '--', '--', '--', '--', '--',
-#                '--', 'wN', 'wK', 'wp', '--', '--',
-#                'bN', '--', '--', 'wN', '--', 'wp',
-#                '--', '--', '--', '--', 'wB', '--']
+#                '--', 'wK', '--', '--', 'bB', '--']
 
-
-
-# eval = agent.evaluatePosition(state)
-# print(eval)
+# state.whiteToMove = False
+# agent.findBestMove(state)
 
 
 
