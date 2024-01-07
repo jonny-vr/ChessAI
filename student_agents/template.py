@@ -4,7 +4,7 @@ from queue import Queue
 import time
 import copy
 import random
-import sys
+# import sys
 # sys.path.append(
 #     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
 # from ChessEngine import GameState
@@ -314,15 +314,15 @@ class Agent:
 
         # individual pieces score
         pawn_score = self.calculate_piece_value(
-            gs.board, 'wp') - self.calculate_piece_value(gs.board, 'bp')
+            gs, 'wp') - self.calculate_piece_value(gs, 'bp')
         knight_score = self.calculate_piece_value(
-            gs.board, 'wN') - self.calculate_piece_value(gs.board, 'bN')
+            gs, 'wN') - self.calculate_piece_value(gs, 'bN')
         bishop_score = self.calculate_piece_value(
-            gs.board, 'wB') - self.calculate_piece_value(gs.board, 'bB')
+            gs, 'wB') - self.calculate_piece_value(gs, 'bB')
         queen_score = self.calculate_piece_value(
-            gs.board, 'wQ') - self.calculate_piece_value(gs.board, 'bQ')
+            gs, 'wQ') - self.calculate_piece_value(gs, 'bQ')
         king_score = self.calculate_piece_value(
-            gs.board, 'wK') - self.calculate_piece_value(gs.board, 'bK')
+            gs, 'wK') - self.calculate_piece_value(gs, 'bK')
 
         # Return a dictionary containing the scores
         scores = {
