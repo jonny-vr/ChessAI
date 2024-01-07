@@ -35,3 +35,43 @@ class Agent:
 
         """
         # TODO
+
+    def isEndgame(self, gs):
+        piece_counts = self.count_chess_pieces(gs.board)
+        if sum(piece_counts.values()) < 15:
+            return True
+        else:
+            return False
+
+    def calculate_piece_value(self, gs, piece_name):
+        """
+        Sums up individual piece scores of a chess piece.
+
+        Args:
+            gs (GameState()): state of Game
+            piece_name (str): Name of chess piece eg. 'bp', 'bB', ...
+
+        Returns:
+            int: Summed up score values for chess piece.
+        """
+
+        # extract type of chesspiece ('n', 'b', etc.)
+        piece_type = piece_name[1].lower()
+        piece_color = piece_name[0]
+
+        if piece_color == 'b':
+            piece_indices = [i for i, piece in enumerate(
+                gs.board) if piece == piece_name]
+        else:
+            piece_indices = [self.square_mirror(i) for i, piece in enumerate(
+                gs.board) if piece == piece_name]
+
+        # könig im endgame hat andere tabelle!
+        if self.isEndgame(gs) and piece_type == 'k':
+            piece_value = sum(
+                self.piece_tables['k-endgame'][i] for i in piece_indices)
+        else:
+            piece_value = sum(
+                self.piece_tables[piece_type][i] for i in piece_indices)
+
+        return piece_value
