@@ -320,7 +320,8 @@ def main(args):
                     if args.verbose:
                         s = f"{'White' if game_state.whiteToMove else 'Black'}'s move: {str(ai_move)}\n" + \
                             f"Current Depth is: {currentDepth}\n" + \
-                            f"The Score this move has is: {nextMoveScore}\n"
+                            f"The Score this move has is: {nextMoveScore}\n" + \
+                            f"Current Board: {game_state.board}"
                         print(s)
                         if args.output_file:
                             if not osp.isfile(args.output_file):

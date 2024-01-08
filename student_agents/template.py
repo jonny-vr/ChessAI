@@ -28,9 +28,9 @@ class Agent:
                 0, 0, 0, 0, 0, 0,
                 5, 10, -20, -20, 10, 5,
                 5, 10, 20, 20, 10, 5,
-                0, 0, 10, 10, 0, 0,
+                0, 20, 30, 30, 20, 0,
                 20, 20, 30, 30, 20, 20,
-                50, 50, 50, 50, 50, 50
+                100, 100, 100, 100, 100, 100
             ],
             'n': [
                 -10, -30, -30, -30, -30, -10,
@@ -156,11 +156,12 @@ class Agent:
 
         optimizedMoves = sorted(
             validMoves, key=lambda move: self.see(move, board))
-
+        myTurn = board.whiteToMove and self.color == 'White' or not board.whiteToMove and self.color == 'Black'
+        
         for move in optimizedMoves:
             board.makeMove(move)
             board.getValidMoves() # wegen bug, dass stalemate variable nur updated danach :/
-            if board.staleMate or board.draw or board.threefold: # falls draw keine weiteren berechnungen
+            if not myTurn and (board.staleMate or board.draw or board.threefold): # falls draw keine weiteren berechnungen
                 board.undoMove()
                 continue
             score = -self.alphabeta(board, -beta, -alpha,
