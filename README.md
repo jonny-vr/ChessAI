@@ -1,5 +1,8 @@
 # **Chess AI**
 
+The Chess AI is implemented in studentagents/VonRad_Schnitt.py
+The rest of the project was given in a university task (ChessEngine, GUI, etc)
+
 ## Basic Idea
 
 The code implements a **chess-playing algorithm** using **iterative deepening alpha-beta search**. It evaluates potential moves using **negamax with alpha-beta pruning**, optimizing move ordering by prioritizing captures. The algorithm includes a **quiescence search** to handle tactically active positions, ensuring more accurate evaluations. The iterative deepening approach progressively explores the game tree at increasing depths to balance computation time and accuracy. **The goal** is to **find the best move** for a given chess game state.
