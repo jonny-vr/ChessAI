@@ -1,6 +1,4 @@
-
-
-from queue import Queue
+# from queue import Queue
 import time
 import copy
 import random
@@ -23,27 +21,37 @@ class Agent:
         self.nextMoveScore = None
         self.turn = False
         self.color = None
+        self.wasInCheck = False
+        self.transpositionTable = {}
 
         self.piece_tables = {
             'p': [
                 0, 0, 0, 0, 0, 0,
                 5, 10, -20, -20, 10, 5,
                 5, 10, 20, 20, 10, 5,
-                0, 20, 30, 30, 20, 0,
-                20, 20, 30, 30, 20, 20,
-                100, 100, 100, 100, 100, 100
+                0, 10, 20, 20, 10, 0,
+                10, 20, 30, 30, 20, 10,
+                50, 50, 50, 50, 50, 50
             ],
             'n': [
-                -10, -30, -30, -30, -30, -10,
-                -30, 5, 20, 20, 5, -30,
-                -30, 0, 30, 30, 0, -30,
+                -20, -30, -30, -30, -30, -20,
+                -30, 10, 15, 15, 10, -30,  # evtl reinschauen
+                -30, 10, 30, 30, 10, -30,
                 -30, 15, 30, 30, 15, -30,
                 -30, 10, 15, 15, 10, -30,
                 -50, -30, -30, -30, -30, -50
             ],
             'b': [
                 -20, -10, -10, -10, -10, -20,
+                -10, 10, 20, 20, 10, -10,
                 -10, 10, 10, 10, 10, -10,
+                -10, 5, 10, 10, 5, -10,
+                -10, 5, 10, 10, 5, -10,
+                -20, -10, -10, -10, -10, -20
+            ],
+            'b-check': [
+                -20, -100, -10, -10, -100, -20,
+                -10, 10, 40, 40, 10, -10,
                 -10, 10, 10, 10, 10, -10,
                 -10, 5, 10, 10, 5, -10,
                 -10, 5, 10, 10, 5, -10,
@@ -121,16 +129,18 @@ class Agent:
         beta = 100000
         # Choose calculation depth here
         depth = 1
-        optimizedMoves = sorted(
-            validMoves, key=lambda move: self.see(move, gs))
+        optimizedMoves = self.optimizeForCaptures(validMoves)
 
         while True:
             for move in optimizedMoves:
+                gs.getValidMoves()  # wegen bug, dass stalemate variable nur updated danach :/
+                self.wasInCheck = gs.inCheck
                 gs.makeMove(move)
                 gs.getValidMoves()  # wegen bug, dass stalemate variable nur updated danach :/
                 if gs.staleMate or gs.draw or gs.threefold:  # falls draw keine weiteren berechnungen
                     gs.undoMove()
                     continue
+
                 boardValue = - \
                     self.alphabeta(gs, -beta, -alpha, depth - 1)
                 if boardValue > bestValue:
@@ -140,11 +150,12 @@ class Agent:
                     alpha = boardValue
 
                 gs.undoMove()  # zurück zum aktuellen Zustand
+                self.wasInCheck = False
 
             depth += 1  # Erhöhe die Tiefe für den nächsten Iterationsschritt
             self.clear_queue(initial_queue)
             self.update_move(bestMove,
-                             self.see(bestMove, gs), depth)
+                             self.evaluatePosition(gs), depth)
 
     def alphabeta(self, board, alpha, beta, depthleft):
         bestscore = -9999
@@ -154,17 +165,18 @@ class Agent:
 
         validMoves = board.getValidMoves()
 
-        optimizedMoves = sorted(
-            validMoves, key=lambda move: self.see(move, board))
-        myTurn = board.whiteToMove and self.color == 'White' or not board.whiteToMove and self.color == 'Black'
+        # optimize order for captures
+        # capturesFirst = self.optimizeForCaptures(validMoves)
+        # sort by simple heuristic
+        optimizedMoves = self.optimizeForCaptures(validMoves)
 
         for move in optimizedMoves:
             board.makeMove(move)
             board.getValidMoves()  # wegen bug, dass stalemate variable nur updated danach :/
-            # falls draw keine weiteren berechnungen
-            if not myTurn and (board.staleMate or board.draw or board.threefold):
+            if board.staleMate or board.draw or board.threefold:  # falls draw keine weiteren berechnungen
                 board.undoMove()
                 continue
+
             score = -self.alphabeta(board, -beta, -alpha,
                                     depthleft - 1)
             board.undoMove()
@@ -184,8 +196,8 @@ class Agent:
             alpha = stand_pat
 
         validMoves = board.getValidMoves()
-        optimizedMoves = sorted(
-            validMoves, key=lambda move: self.see(move, board))
+        # capturesFirst = self.optimizeForCaptures(validMoves)
+        optimizedMoves = self.optimizeForCaptures(validMoves)
 
         for move in optimizedMoves:
             if move.isCapture:
@@ -198,18 +210,28 @@ class Agent:
                     alpha = score
         return alpha
 
+    def custom_hash(self, board):
+        # Board als String konvertieren
+        board_str = ''.join(board.board)
+
+        # Hash-Wert mit whiteToMove als String hinzufügen
+        final_hash = board_str + "#" + str(board.whiteToMove)
+
+        return final_hash
+
     def optimizeForCaptures(self, validMoves):
         capture_moves = [move for move in validMoves if move.isCapture]
         other_moves = [
             move for move in validMoves if move not in capture_moves]
         return capture_moves + other_moves
 
-    # simple heuristic
+   # for debugging
     def see(self, move, board):
         board.makeMove(move)
         eval = self.evaluatePosition(board)
         board.undoMove()
         return eval
+
 
     def evaluatePosition(self, gs):
         """
@@ -222,11 +244,14 @@ class Agent:
         Score: Integer
 
         """
+        board_hash = self.custom_hash(gs)
+        if board_hash in self.transpositionTable:
+            return self.transpositionTable[board_hash]
         # check for checkmate / stalemate / draw
         myTurn = gs.whiteToMove and self.color == 'White' or not gs.whiteToMove and self.color == 'Black'
 
         if gs.checkMate:
-            if myTurn:  # anschauen
+            if myTurn:
                 return -9999
             else:
                 return 9999
@@ -248,9 +273,18 @@ class Agent:
 
         # favorable position for white = unfavorable position for black
         if gs.whiteToMove:
+            self.transpositionTable[board_hash] = eval
             return eval
         else:
+            self.transpositionTable[board_hash] = -eval
             return -eval
+
+    def isEndgame(self, gs):
+        piece_counts = self.count_chess_pieces(gs.board)
+        if sum(piece_counts.values()) < 15:
+            return True
+        else:
+            return False
 
     def count_chess_pieces(self, board):
         """
@@ -352,19 +386,13 @@ class Agent:
         mirrored_index = col + (5 - row) * 6
         return mirrored_index
 
-    def isEndgame(self, gs):
-        piece_counts = self.count_chess_pieces(gs.board)
-        if sum(piece_counts.values()) < 15:
-            return True
-        else:
-            return False
 
     def calculate_piece_value(self, gs, piece_name):
         """
         Sums up individual piece scores of a chess piece.
 
         Args:
-            gs (GameState()): state of Game
+            gs (GameState()): State of Game
             piece_name (str): Name of chess piece eg. 'bp', 'bB', ...
 
         Returns:
@@ -374,7 +402,6 @@ class Agent:
         # extract type of chesspiece ('n', 'b', etc.)
         piece_type = piece_name[1].lower()
         piece_color = piece_name[0]
-
         if piece_color == 'b':
             piece_indices = [i for i, piece in enumerate(
                 gs.board) if piece == piece_name]
@@ -387,8 +414,12 @@ class Agent:
             piece_value = sum(
                 self.piece_tables['k-endgame'][i] for i in piece_indices)
         else:
-            piece_value = sum(
-                self.piece_tables[piece_type][i] for i in piece_indices)
+            if self.wasInCheck and piece_type == 'b': # sonderfall damit bishop den könig blockt bei queen check
+                piece_value = sum(
+                    self.piece_tables['b-check'][i] for i in piece_indices)
+            else:
+                piece_value = sum(
+                    self.piece_tables[piece_type][i] for i in piece_indices)
 
         return piece_value
 
@@ -397,12 +428,14 @@ class Agent:
 
 # state = GameState()
 
-# state.board = ['bK', '--', '--', '--', 'bB', '--',
-#                '--', '--', '--', 'wN', 'wp', '--',
-#                'bp', '--', '--', '--', '--', '--',
-#                'wp', '--', '--', '--', '--', '--',
+# state.board = ['bN', 'bB', 'bQ', 'bK', 'bB', 'bN',
+#                'bp', 'bp', '--', 'bp', 'bp', 'bp',
 #                '--', '--', '--', '--', '--', '--',
-#                '--', 'wK', '--', '--', 'bB', '--']
+#                'wQ', 'wp', '--', '--', '--', '--',
+#                'wp', '--', 'wp', 'wp', 'wp', 'wp',
+#                'wN', 'wB', '--', 'wK', 'wB', 'wN']
+
 
 # state.whiteToMove = False
+
 # agent.findBestMove(state)
