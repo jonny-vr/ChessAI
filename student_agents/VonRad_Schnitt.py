@@ -1,13 +1,12 @@
-from queue import Queue
-import sys
-sys.path.append(
-    '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
-from ChessEngine import GameState
-
+# from queue import Queue
+# import sys
+# sys.path.append(
+#     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
+# from ChessEngine import GameState
 
 class Agent:
     def __init__(self):
-        self.move_queue = Queue()  
+        self.move_queue = None
         self.nextMove = None
         self.counter = None
         self.currentDepth = None
@@ -16,26 +15,26 @@ class Agent:
         self.globalBestMove = None
         self.globalBestScore = None
         self.nextMoveScore = None
-        self.color = None # color of agent
-        self.transpositionTable = {} # hashtable containing 
+        self.color = None  # color of agent
+        self.transpositionTable = {}  # hashtable containing
         self.piece_tables = {  # dictionary for each piece to evaluate position
-            'p': [ # pawns need to go forward
+            'p': [  # pawns need to go forward
                 0, 0, 0, 0, 0, 0,
-                5, 0, -20, -20, 10, 5,
+                5, 10, -20, -20, 10, 5,
                 5, 10, 20, 20, 10, 5,
                 0, 10, 20, 20, 10, 0,
                 10, 20, 30, 30, 20, 10,
                 50, 50, 50, 50, 50, 50
             ],
-            'n': [ # knights are the most effective in center
+            'n': [  # knights are the most effective in center
                 -20, -30, -30, -30, -30, -20,
-                -30, 10, 15, 15, 10, -30,  
+                -30, 10, 15, 15, 10, -30,
                 -30, 10, 30, 30, 10, -30,
                 -30, 15, 30, 30, 15, -30,
                 -30, 10, 15, 15, 10, -30,
                 -50, -30, -30, -30, -30, -50
             ],
-            'b': [ # bishops are more effective in center
+            'b': [  # bishops are more effective in center
                 -20, -10, -10, -10, -10, -20,
                 -10, 10, 10, 10, 10, -10,
                 -10, 10, 10, 10, 10, -10,
@@ -43,7 +42,7 @@ class Agent:
                 -10, 5, 10, 10, 5, -10,
                 -20, -10, -10, -10, -10, -20
             ],
-            'q': [ # queens are more effective in center (apart from check)
+            'q': [  # queens are more effective in center (apart from check)
                 -20, -10, -5, -5, -10, -20,
                 -10, 5, 5, 5, 5, -10,
                 0, 5, 5, 5, 5, -5,
@@ -51,7 +50,7 @@ class Agent:
                 -10, 5, 5, 5, 5, -10,
                 -20, -10, -5, -5, -10, -20
             ],
-            'k': [ # king should be safe in opening/middlegame
+            'k': [  # king should be safe in opening/middlegame
                 20, 10, 0, 0, 10, 20,
                 -10, -20, -20, -20, -20, -10,
                 -20, -30, -40, -40, -30, -20,
@@ -59,7 +58,7 @@ class Agent:
                 -30, -40, -50, -50, -40, -30,
                 -30, -40, -50, -50, -40, -30
             ],
-            'k-endgame': [ # king should help pawns in endgame
+            'k-endgame': [  # king should help pawns in endgame
                 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0,
                 0, 10, 10, 10, 10, 0,
@@ -76,7 +75,7 @@ class Agent:
 #
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////
 # ---------------------------------------------------------------------------------------------------------
-    
+
     def get_move(self):
         move = None
         while not self.move_queue.empty():
@@ -94,11 +93,11 @@ class Agent:
 
     def clear_queue(self, outer_queue):
         self.move_queue = outer_queue
-        
+
 # ---------------------------------------------------------------------------------------------------------
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////
 #
-#                                    move calculation 
+#                                    move calculation
 #
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////
 # ---------------------------------------------------------------------------------------------------------
@@ -107,6 +106,8 @@ class Agent:
 # ---------------------------------------------------------------------------------------------------------
 #                              iterative deepening search
 # ---------------------------------------------------------------------------------------------------------
+
+
     def findBestMove(self, gs):
         """
         Finds the best chess move for the current game state using an iterative deepening alpha-beta search.
@@ -122,46 +123,47 @@ class Agent:
         validMoves = gs.getValidMoves()
         optimizedMoves = self.optimizeForCaptures(validMoves)
         bestMove = optimizedMoves[0]
-        initial_queue = self.move_queue        
+        initial_queue = self.move_queue
         bestValue = -99999
         alpha = -100000
         beta = 100000
         depth = 1
-        
+
         # start of iterative deepening search
         while True:
             for move in optimizedMoves:
-                
+
                 # start with bestMove after every iteration
                 best_move_index = optimizedMoves.index(bestMove)
                 optimizedMoves = [optimizedMoves[best_move_index]] + \
-                optimizedMoves[:best_move_index] + optimizedMoves[best_move_index + 1:]
-                
+                    optimizedMoves[:best_move_index] + \
+                    optimizedMoves[best_move_index + 1:]
+
                 # make move and update gs.stalemate
                 gs.makeMove(move)
                 gs.getValidMoves()
-                
-                # we don't want draws  
-                if gs.staleMate or gs.draw or gs.threefold:  
+
+                # we don't want draws
+                if gs.staleMate or gs.draw or gs.threefold or self.threeSameMovesInRow(gs, move):
                     gs.undoMove()
                     continue
 
                 # calculate
                 boardValue = - \
                     self.alphabeta(gs, -beta, -alpha, depth - 1)
-                    
+
                 # update values accordingly
                 if boardValue > bestValue:
                     bestValue = boardValue
                     bestMove = move
                 if boardValue > alpha:
                     alpha = boardValue
-                    
+
                 # undo move
-                gs.undoMove()  
+                gs.undoMove()
 
             # increase calculation depth and clear queue
-            depth += 1  
+            depth += 1
             self.clear_queue(initial_queue)
             self.update_move(bestMove,
                              self.evaluatePosition(gs), depth)
@@ -184,7 +186,7 @@ class Agent:
         int: The best score for the current board position within the specified score window.
         """
         # Initialize the best score with a low value.
-        bestscore = -9999  
+        bestscore = -9999
 
         # Perform a quiesce search when the recursion depth reaches zero.
         if (depthleft == 0):
@@ -203,8 +205,8 @@ class Agent:
             if board.staleMate or board.draw or board.threefold:
                 board.undoMove()
                 continue
-            
-            # calculating score using negamax approach (negating value) 
+
+            # calculating score using negamax approach (negating value)
             score = -self.alphabeta(board, -beta, -alpha, depthleft - 1)
 
             # undo move
@@ -217,7 +219,7 @@ class Agent:
                 bestscore = score
             if (score > alpha):
                 alpha = score
-            
+
         return bestscore
 
 
@@ -282,6 +284,8 @@ class Agent:
 # ---------------------------------------------------------------------------------------------------------
 #                                     Final evaluation
 # ---------------------------------------------------------------------------------------------------------
+
+
     def evaluatePosition(self, gs):
         """
         Parameters
@@ -373,7 +377,7 @@ class Agent:
                     piece_counts['bp'] += 1
 
         return piece_counts
-    
+
 # ---------------------------------------------------------------------------------------------------------
 #                              score calculation (material + individual pieces)
 # ---------------------------------------------------------------------------------------------------------
@@ -423,7 +427,7 @@ class Agent:
         }
 
         return scores
-    
+
 # ---------------------------------------------------------------------------------------------------------
 #                                    piece scores
 # ---------------------------------------------------------------------------------------------------------
@@ -459,7 +463,7 @@ class Agent:
                 self.piece_tables[piece_type][i] for i in piece_indices)
 
         return piece_value
-    
+
 # ---------------------------------------------------------------------------------------------------------
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////
 #
@@ -467,7 +471,7 @@ class Agent:
 #
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////
 # ---------------------------------------------------------------------------------------------------------
-    
+
     # determines if endgame (approximation 15 or less pieces) --> used in calculatePieceValue()
     def isEndgame(self, gs):
         """
@@ -485,7 +489,7 @@ class Agent:
             return True
         else:
             return False
-    
+
     # mirros index for piece score --> used in calculatePieceValue()
     def squareMirror(self, index):
         """
@@ -500,7 +504,7 @@ class Agent:
         row, col = divmod(index, 6)
         mirrored_index = col + (5 - row) * 6
         return mirrored_index
-    
+
     def customHash(self, board):
         """
         Generates a custom hash value for the given chess board state.
@@ -532,6 +536,13 @@ class Agent:
             move for move in validMoves if move not in capture_moves]
         return capture_moves + other_moves
 
+    def threeSameMovesInRow(self, gs, move):
+        if len(gs.moveLog) > 4:
+            last_own_move = gs.moveLog[-2].getChessNotation()
+            second_last_own_move = gs.moveLog[-4].getChessNotation()
+            return move.getChessNotation() == last_own_move == second_last_own_move
+        else:
+            return False
 
 # ---------------------------------------------------------------------------------------------------------
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -541,17 +552,16 @@ class Agent:
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////
 # ---------------------------------------------------------------------------------------------------------
 
-agent = Agent()
+# agent = Agent()
 
-state = GameState()
+# state = GameState()
 
-state.board = ['bN', '--', 'bQ', 'bK', 'bB', 'bN',
-               '--', 'bp', '--', '--', 'bp', 'bp',
-               'bp', '--', 'wp', 'bB', '--', '--',
-               '--', '--', '--', '--', '--', '--',
-               'wp', 'wp', 'wN', '--', 'wp', 'wp',
-               '--', 'wB', 'wQ', 'wK', 'wB', 'wN']
+# state.board = ['--', 'bB', 'bQ', 'bK', 'bB', 'bN',
+#                'bp', 'bp', 'bN', '--', 'bp', 'bp',
+#                '--', '--', '--', '--', '--', '--',
+#                'wp', '--', 'bp', 'wB', '--', '--',
+#                '--', 'wp', 'wN', '--', 'wp', 'wp',
+#                '--', '--', 'wQ', 'wK', 'wB', 'wN']
 
-state.whiteToMove = False
 
-agent.findBestMove(state)
+# agent.findBestMove(state)

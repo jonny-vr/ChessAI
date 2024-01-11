@@ -20,7 +20,7 @@ class Agent:
         self.piece_tables = {  # dictionary for each piece to evaluate position
             'p': [ # pawns need to go forward
                 0, 0, 0, 0, 0, 0,
-                5, 0, -20, -20, 10, 5,
+                5, 10, -20, -20, 10, 5,
                 5, 10, 20, 20, 10, 5,
                 0, 10, 20, 20, 10, 0,
                 10, 20, 30, 30, 20, 10,
@@ -141,7 +141,7 @@ class Agent:
                 gs.getValidMoves()
                 
                 # we don't want draws  
-                if gs.staleMate or gs.draw or gs.threefold:  
+                if gs.staleMate or gs.draw or gs.threefold or self.threeSameMovesInRow(gs, move):   
                     gs.undoMove()
                     continue
 
@@ -531,6 +531,13 @@ class Agent:
             move for move in validMoves if move not in capture_moves]
         return capture_moves + other_moves
 
+    def threeSameMovesInRow(self, gs, move) :
+        if len(gs.moveLog) > 4:
+            last_own_move = gs.moveLog[-2].getChessNotation()
+            second_last_own_move = gs.moveLog[-4].getChessNotation()
+            return move.getChessNotation() == last_own_move == second_last_own_move
+        else :
+            return False 
 
 # ---------------------------------------------------------------------------------------------------------
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////
