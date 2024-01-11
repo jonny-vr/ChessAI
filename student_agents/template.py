@@ -4,7 +4,6 @@
 #     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
 # from ChessEngine import GameState
 
-
 class Agent:
     def __init__(self):
         self.move_queue = None  
@@ -21,7 +20,7 @@ class Agent:
         self.piece_tables = {  # dictionary for each piece to evaluate position
             'p': [ # pawns need to go forward
                 0, 0, 0, 0, 0, 0,
-                5, 10, -20, -20, 10, 5,
+                5, 0, -20, -20, 10, 5,
                 5, 10, 20, 20, 10, 5,
                 0, 10, 20, 20, 10, 0,
                 10, 20, 30, 30, 20, 10,
@@ -29,7 +28,7 @@ class Agent:
             ],
             'n': [ # knights are the most effective in center
                 -20, -30, -30, -30, -30, -20,
-                -30, 10, 20, 20, 10, -30,  
+                -30, 10, 15, 15, 10, -30,  
                 -30, 10, 30, 30, 10, -30,
                 -30, 15, 30, 30, 15, -30,
                 -30, 10, 15, 15, 10, -30,

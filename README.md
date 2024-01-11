@@ -22,10 +22,10 @@ The three main functions are:
 **Function Call Hierarchy:**
 
 ```mermaid
-graph TD
-A[findBestMove] -- increasing depth --> B((alphabeta))
-B -- Recursive Call --> B 
-B --> C{quiesce}
+graph TD;
+A[findBestMove] -- increasing depth --> B((alphabeta));
+B -- Recursive Call --> B ;
+B --> C{quiesce};
 ```
 
 `findBestMove()` implements iterative deepening search and calls alphabeta

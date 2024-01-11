@@ -1,13 +1,13 @@
-# from queue import Queue
-# import sys
-# sys.path.append(
-#     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
-# from ChessEngine import GameState
+from queue import Queue
+import sys
+sys.path.append(
+    '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
+from ChessEngine import GameState
 
 
 class Agent:
     def __init__(self):
-        self.move_queue = None  
+        self.move_queue = Queue()  
         self.nextMove = None
         self.counter = None
         self.currentDepth = None
@@ -21,7 +21,7 @@ class Agent:
         self.piece_tables = {  # dictionary for each piece to evaluate position
             'p': [ # pawns need to go forward
                 0, 0, 0, 0, 0, 0,
-                5, 10, -20, -20, 10, 5,
+                5, 0, -20, -20, 10, 5,
                 5, 10, 20, 20, 10, 5,
                 0, 10, 20, 20, 10, 0,
                 10, 20, 30, 30, 20, 10,
@@ -29,7 +29,7 @@ class Agent:
             ],
             'n': [ # knights are the most effective in center
                 -20, -30, -30, -30, -30, -20,
-                -30, 10, 20, 20, 10, -30,  
+                -30, 10, 15, 15, 10, -30,  
                 -30, 10, 30, 30, 10, -30,
                 -30, 15, 30, 30, 15, -30,
                 -30, 10, 15, 15, 10, -30,
@@ -541,16 +541,17 @@ class Agent:
 # /////////////////////////////////////////////////////////////////////////////////////////////////////////
 # ---------------------------------------------------------------------------------------------------------
 
-# agent = Agent()
+agent = Agent()
 
-# state = GameState()
+state = GameState()
 
-# state.board = ['--', 'bB', 'bQ', 'bK', 'bB', 'bN',
-#                'bp', 'bp', 'bN', '--', 'bp', 'bp',
-#                '--', '--', '--', '--', '--', '--',
-#                'wp', '--', 'bp', 'wB', '--', '--',
-#                '--', 'wp', 'wN', '--', 'wp', 'wp',
-#                '--', '--', 'wQ', 'wK', 'wB', 'wN']
+state.board = ['bN', '--', 'bQ', 'bK', 'bB', 'bN',
+               '--', 'bp', '--', '--', 'bp', 'bp',
+               'bp', '--', 'wp', 'bB', '--', '--',
+               '--', '--', '--', '--', '--', '--',
+               'wp', 'wp', 'wN', '--', 'wp', 'wp',
+               '--', 'wB', 'wQ', 'wK', 'wB', 'wN']
 
+state.whiteToMove = False
 
-# agent.findBestMove(state)
+agent.findBestMove(state)
